@@ -1,0 +1,20 @@
+{
+ "id": "org.aroz.zoraxy.uptime-neko",
+ "name": "Uptime Neko",
+ "author": "aroz.org",
+ "author_contact": "noreply@aroz.org",
+ "description": "A mini Uptime Monitor: monitor hosts, websites, ports, DNS and TLS certs with status pages and notifications.",
+ "url": "https://zoraxy.aroz.org",
+ "type": 1,
+ "version_major": 1,
+ "version_minor": 0,
+ "version_patch": 0,
+ "static_capture_paths": null,
+ "static_capture_ingress": "",
+ "dynamic_capture_sniff": "",
+ "dynamic_capture_ingress": "",
+ "ui_path": "/",
+ "subscription_path": "",
+ "subscriptions_events": null,
+ "permitted_api_endpoints": null
+}

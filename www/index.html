@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="./logo.ico">
+    <script src="/script/jquery-3.6.0.min.js"></script>
+    <script src="./chart.umd.min.js"></script>
+    <link rel="stylesheet" href="./neko.css">
+    <title>Uptime Neko</title>
+</head>
+<body>
+<!-- ===================== NAVBAR ===================== -->
+<div class="navbar">
+    <div class="brand"><img class="logo" src="./logo.png" alt="Uptime Neko"> <span class="brand-text">Uptime Neko</span></div>
+    <div class="nav-links">
+        <button class="nav-link active" data-view="dashboard" onclick="switchView('dashboard')" title="Dashboard"><span class="icon icon-dashboard"></span> <span class="nav-text">Dashboard</span></button>
+        <button class="nav-link" data-view="statuspages" onclick="switchView('statuspages')" title="Status Pages"><span class="icon icon-statuspage"></span> <span class="nav-text">Status Pages</span></button>
+        <button class="nav-link" data-view="notifications" onclick="switchView('notifications')" title="Notifications"><span class="icon icon-notification"></span> <span class="nav-text">Notifications</span></button>
+        <button class="nav-link" data-view="tokens" onclick="switchView('tokens')" title="API Tokens"><span class="icon icon-key"></span> <span class="nav-text">API Tokens</span></button>
+        <button class="nav-link" data-view="settings" onclick="switchView('settings')" title="Settings"><span class="icon icon-settings"></span> <span class="nav-text">Settings</span></button>
+    </div>
+</div>
+
+<div class="content">
+    <!-- ===================== DASHBOARD ===================== -->
+    <div class="view active" data-view="dashboard">
+        <div class="dash">
+            <!-- sidebar -->
+            <div class="panel sidebar">
+                <button class="btn btn-green btn-block btn-lg" onclick="openMonitorModal()">＋ Add New Monitor</button>
+                <input type="text" class="search" id="monSearch" placeholder="Search monitors..." oninput="renderSidebar()">
+                <div class="mon-list" id="monList"><div class="loading">Loading…</div></div>
+            </div>
+            <!-- main pane -->
+            <div id="mainPane">
+                <div class="panel panel-pad"><div class="loading">Loading…</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== STATUS PAGES ===================== -->
+    <div class="view" data-view="statuspages">
+        <div class="view-head">
+            <h2><span class="icon icon-lg icon-statuspage"></span> Status Pages</h2><div class="spacer"></div>
+            <button class="btn btn-green" onclick="openPageModal()">＋ Add Status Page</button>
+        </div>
+        <div class="note">Point a Zoraxy HTTP proxy rule at <b id="publicHint">127.0.0.1:8999</b> and bind it to a hostname listed on a page below. The public page is read-only.</div>
+        <div class="panel">
+            <table class="tbl">
+                <thead><tr><th>Title</th><th>Slug</th><th>Hostnames</th><th>Monitors</th><th>Protected</th><th></th></tr></thead>
+                <tbody id="pageList"><tr><td colspan="6" class="loading">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================== NOTIFICATIONS ===================== -->
+    <div class="view" data-view="notifications">
+        <div class="view-head">
+            <h2><span class="icon icon-lg icon-notification"></span> Notifications</h2><div class="spacer"></div>
+            <button class="btn btn-green" onclick="openNotifyModal()">＋ Add Notification</button>
+        </div>
+        <div class="panel">
+            <table class="tbl">
+                <thead><tr><th>Name</th><th>Type</th><th>Enabled</th><th></th></tr></thead>
+                <tbody id="notifyList"><tr><td colspan="4" class="loading">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================== TOKENS ===================== -->
+    <div class="view" data-view="tokens">
+        <div class="view-head">
+            <h2><span class="icon icon-lg icon-key"></span> API Tokens</h2><div class="spacer"></div>
+            <button class="btn btn-green" onclick="createToken()">＋ Create Token</button>
+        </div>
+        <div class="note">Tokens grant <b>read-only</b> access to the public API, e.g.
+            <code>GET http://&lt;public-host&gt;/api/v1/status</code> with header <code>Authorization: Bearer &lt;token&gt;</code>.</div>
+        <div class="panel">
+            <table class="tbl">
+                <thead><tr><th>Name</th><th>Created</th><th></th></tr></thead>
+                <tbody id="tokenList"><tr><td colspan="3" class="loading">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================== SETTINGS ===================== -->
+    <div class="view" data-view="settings">
+        <div class="view-head"><h2><span class="icon icon-lg icon-settings"></span> Settings</h2></div>
+        <div class="panel panel-pad" style="max-width:640px;">
+            <div class="sec-title">Public Status Server</div>
+            <div class="form-row two">
+                <div class="field"><label>Bind Address</label><input type="text" id="setBindAddr" placeholder="127.0.0.1"></div>
+                <div class="field"><label>Public Port</label><input type="number" id="setPublicPort" placeholder="8999"></div>
+            </div>
+            <hr class="divider">
+            <div class="sec-title">Monitoring</div>
+            <div class="form-row two">
+                <div class="field"><label>Default Interval (sec, min 20)</label><input type="number" id="setInterval" min="20" placeholder="20"></div>
+                <div class="field"><label>History Retention (days)</label><input type="number" id="setRetention" min="1" placeholder="30"></div>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()"><span class="icon icon-save"></span> Save Settings</button>
+            <div class="note" id="restartNotice" style="display:none; margin-top:1rem; border-left:4px solid var(--yellow);">
+                <span class="icon icon-warning"></span> Public port change takes effect after the plugin is restarted (disable &amp; re-enable in Zoraxy).
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== MONITOR MODAL ===================== -->
+<div class="modal-overlay" id="monitorModal">
+    <div class="modal-box">
+        <div class="modal-head"><span id="monitorModalTitle">Add Monitor</span></div>
+        <div class="modal-body">
+            <input type="hidden" id="mId">
+            <div class="form-row two">
+                <div class="field"><label>Friendly Name</label><input type="text" id="mName" placeholder="My Website"></div>
+                <div class="field"><label>Monitor Type</label>
+                    <select id="mType" onchange="onTypeChange()">
+                        <option value="http">HTTP(s) / Website</option>
+                        <option value="ping">Ping (ICMP)</option>
+                        <option value="tcp">TCP Port</option>
+                        <option value="dns">DNS Record</option>
+                        <option value="ssl">SSL Certificate</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field"><label id="mTargetLabel">URL</label>
+                    <input type="text" id="mTarget" placeholder="https://example.com">
+                    <span class="hint" id="mTargetHint"></span>
+                </div>
+            </div>
+            <div class="form-row three">
+                <div class="field"><label>Interval (s)</label><input type="number" id="mInterval" min="20" value="20"></div>
+                <div class="field"><label>Timeout (s)</label><input type="number" id="mTimeout" min="1" value="10"></div>
+                <div class="field" data-type="tcp ssl"><label>Port</label><input type="number" id="mPort" placeholder="443"></div>
+            </div>
+
+            <div data-type="http">
+                <div class="form-row three">
+                    <div class="field"><label>Method</label>
+                        <select id="mMethod"><option>GET</option><option>HEAD</option><option>POST</option></select>
+                    </div>
+                    <div class="field"><label>Expected Status (0=any 2xx/3xx)</label><input type="number" id="mExpectedStatus" value="0"></div>
+                    <div class="field"><label>Cert Warn (days, 0=off)</label><input type="number" id="mCertWarnHttp" value="0"></div>
+                </div>
+                <div class="form-row two">
+                    <div class="field"><label>Keyword (optional)</label><input type="text" id="mKeyword" placeholder="text expected in body"></div>
+                    <div class="field"><label>&nbsp;</label>
+                        <label class="checkrow"><input type="checkbox" id="mKeywordInvert"> Up when keyword is ABSENT</label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="checkrow"><input type="checkbox" id="mIgnoreTLS"> Ignore TLS certificate errors</label>
+                </div>
+            </div>
+
+            <div data-type="dns">
+                <div class="form-row three">
+                    <div class="field"><label>Record Type</label>
+                        <select id="mDnsType"><option>A</option><option>AAAA</option><option>CNAME</option><option>TXT</option><option>MX</option><option>NS</option></select>
+                    </div>
+                    <div class="field"><label>Resolver (optional)</label><input type="text" id="mDnsResolver" placeholder="1.1.1.1"></div>
+                    <div class="field"><label>Expected value (optional)</label><input type="text" id="mDnsExpected" placeholder="contains..."></div>
+                </div>
+            </div>
+
+            <div data-type="ssl">
+                <div class="form-row">
+                    <div class="field"><label>Certificate expiry warning (days before expiry)</label><input type="number" id="mCertWarnSsl" value="14"></div>
+                </div>
+            </div>
+
+            <hr class="divider">
+            <div class="sec-title">Notifications</div>
+            <div id="mNotifyChecklist" class="checklist"></div>
+
+            <hr class="divider">
+            <label class="switch"><input type="checkbox" id="mEnabled" checked><span class="track"></span> Enabled</label>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-grey" onclick="closeModal('monitorModal')">Cancel</button>
+            <button class="btn btn-green" onclick="saveMonitor()"><span class="icon icon-save"></span> Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== NOTIFY MODAL ===================== -->
+<div class="modal-overlay" id="notifyModal">
+    <div class="modal-box">
+        <div class="modal-head"><span class="icon icon-lg icon-notification"></span> <span id="notifyModalTitle">Add Notification</span></div>
+        <div class="modal-body">
+            <input type="hidden" id="nId">
+            <div class="form-row">
+                <div class="field"><label>Name</label><input type="text" id="nName" placeholder="My Webhook"></div>
+            </div>
+            <div class="form-row two">
+                <div class="field"><label>Webhook URL</label><input type="text" id="nWhUrl" placeholder="https://hooks.example.com/..."></div>
+                <div class="field"><label>Method</label><select id="nWhMethod"><option>POST</option><option>PUT</option></select></div>
+            </div>
+            <span class="hint">Payload: <code>{ "subject": "...", "body": "...", "time": 123 }</code></span>
+            <hr class="divider">
+            <label class="switch"><input type="checkbox" id="nEnabled" checked><span class="track"></span> Enabled</label>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-grey" onclick="closeModal('notifyModal')">Cancel</button>
+            <button class="btn btn-blue" onclick="testNotify()"><span class="icon icon-send"></span> Send Test</button>
+            <button class="btn btn-green" onclick="saveNotify()"><span class="icon icon-save"></span> Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== PAGE MODAL ===================== -->
+<div class="modal-overlay" id="pageModal">
+    <div class="modal-box">
+        <div class="modal-head"><span class="icon icon-lg icon-statuspage"></span> <span id="pageModalTitle">Add Status Page</span></div>
+        <div class="modal-body">
+            <input type="hidden" id="pId">
+            <div class="form-row two">
+                <div class="field"><label>Title</label><input type="text" id="pTitle" placeholder="My Services"></div>
+                <div class="field"><label>Slug</label><input type="text" id="pSlug" placeholder="main"></div>
+            </div>
+            <div class="form-row"><div class="field"><label>Description</label><input type="text" id="pDesc"></div></div>
+            <div class="form-row"><div class="field"><label>Hostnames (comma separated)</label><input type="text" id="pHosts" placeholder="status.example.com"></div></div>
+            <div class="form-row two">
+                <div class="field"><label>Theme</label><select id="pTheme"><option value="auto">Auto</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+                <div class="field"><label>Password (optional)</label>
+                    <input type="password" id="pPassword" placeholder="leave blank for none">
+                    <label class="checkrow" style="margin-top:.5rem;"><input type="checkbox" id="pClearPasswd"> Remove existing password</label>
+                </div>
+            </div>
+            <div class="form-row"><label class="checkrow"><input type="checkbox" id="pDefault"> Use as default page (when no hostname matches)</label></div>
+            <hr class="divider">
+            <div class="sec-title">Monitors on this page</div>
+            <div id="pMonitorChecklist" class="checklist"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-grey" onclick="closeModal('pageModal')">Cancel</button>
+            <button class="btn btn-green" onclick="savePage()"><span class="icon icon-save"></span> Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== TOKEN RESULT MODAL ===================== -->
+<div class="modal-overlay" id="tokenModal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-head"><span class="icon icon-lg icon-key"></span> API Token Created</div>
+        <div class="modal-body">
+            <p>Copy this token now — it will not be shown again:</p>
+            <div class="form-row"><div class="field"><input type="text" id="tokenValue" class="mono" readonly></div></div>
+            <button class="btn btn-blue" onclick="copyToken()"><span class="icon icon-copy"></span> Copy to clipboard</button>
+        </div>
+        <div class="modal-foot"><button class="btn btn-green" onclick="closeModal('tokenModal')">Done</button></div>
+    </div>
+</div>
+
+<!-- ===================== CONFIRM / PROMPT MODAL ===================== -->
+<!-- Zoraxy's plugin iframe is sandboxed without allow-modals, so native
+     confirm()/prompt() are silently blocked. This replaces both. -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-head" id="confirmTitle">Confirm</div>
+        <div class="modal-body">
+            <p id="confirmMessage"></p>
+            <div class="form-row" id="confirmInputWrap" style="display:none;">
+                <div class="field"><input type="text" id="confirmInput"></div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-grey" id="confirmCancelBtn">Cancel</button>
+            <button class="btn btn-green" id="confirmOkBtn">OK</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./neko.js"></script>
+</body>
+</html>

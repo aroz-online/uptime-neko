@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status</title>
+    <link rel="icon" type="image/x-icon" href="./logo.ico">
+    <script src="./chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #f4f5f7;
+            --card: #ffffff;
+            --text: #1b1c1d;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --up: #22c55e;
+            --down: #ef4444;
+            --warn: #f59e0b;
+            --accent: #22c55e;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        html.dark {
+            --bg: #0f1115;
+            --card: #1a1d23;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --border: #2a2e37;
+            --shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            transition: background 0.2s, color 0.2s;
+        }
+        .wrap { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+        .topbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; }
+        .logo { width: 38px; height: 38px; border-radius: 9px;
+            object-fit: cover; flex-shrink: 0; }
+        .title { font-size: 1.6rem; font-weight: 700; }
+        .theme-toggle { margin-left: auto; cursor: pointer; background: var(--card);
+            border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.6rem;
+            color: var(--text); font-size: 1rem; line-height: 1; }
+        .banner { display: flex; align-items: center; gap: 0.75rem; background: var(--card);
+            border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.25rem;
+            box-shadow: var(--shadow); margin-bottom: 0.75rem; font-size: 1.2rem; font-weight: 600; }
+        .banner .icon { width: 26px; height: 26px; border-radius: 50%; display: inline-flex;
+            align-items: center; justify-content: center; color: #fff; font-size: 15px; flex-shrink: 0; }
+        .banner.ok .icon { background: var(--up); }
+        .banner.bad .icon { background: var(--down); }
+        .desc { color: var(--muted); margin: 0 0 2rem 0.25rem; }
+        .section-title { font-size: 1.1rem; font-weight: 700; margin: 1.5rem 0 0.75rem; }
+        .services { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+            box-shadow: var(--shadow); overflow: hidden; }
+        .service { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .service:last-child { border-bottom: none; }
+        .service-row { display: flex; align-items: center; gap: 1rem; }
+        .badge { font-size: 0.72rem; font-weight: 700; color: #fff; padding: 0.18rem 0.5rem;
+            border-radius: 6px; flex-shrink: 0; min-width: 52px; text-align: center; }
+        .badge.up { background: var(--up); }
+        .badge.warn { background: var(--warn); color: #3a2600; }
+        .badge.down { background: var(--down); }
+        .badge.unknown { background: #9ca3af; }
+        .tier-up { color: var(--up); }
+        .tier-warn { color: var(--warn); }
+        .tier-down { color: var(--down); }
+        .service-name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; }
+        .bars { display: flex; align-items: flex-end; gap: 2px; height: 28px; }
+        .bar { width: 5px; border-radius: 2px; background: var(--border); }
+        .bar.up { background: var(--up); }
+        .bar.down { background: var(--down); }
+        .service-meta { font-size: 0.78rem; color: var(--muted); text-align: right;
+            margin-top: 0.35rem; display: flex; justify-content: space-between; }
+        .chart-wrap { height: 180px; margin-top: 0.85rem; display: none; }
+        .service.open .chart-wrap { display: block; }
+        .footer { text-align: center; color: var(--muted); font-size: 0.82rem; margin-top: 2.5rem; }
+        .footer a { color: var(--accent); text-decoration: none; }
+        /* password gate */
+        .lock { max-width: 360px; margin: 5rem auto; background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 2rem; text-align: center; box-shadow: var(--shadow); }
+        .lock input { width: 100%; padding: 0.6rem; margin: 1rem 0; border: 1px solid var(--border);
+            border-radius: 8px; background: var(--bg); color: var(--text); font-size: 1rem; }
+        .lock button { width: 100%; padding: 0.6rem; border: none; border-radius: 8px;
+            background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .lock .err { color: var(--down); font-size: 0.85rem; min-height: 1.2em; }
+        .loading, .empty { text-align: center; color: var(--muted); padding: 4rem 1rem; }
+        /* masked SVG icon: colored via background-color/currentColor so it follows
+           the light/dark theme automatically (the source SVG's own fill is ignored) */
+        .icon { display: inline-block; width: 1em; height: 1em; background-color: currentColor;
+            -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+            -webkit-mask-position: center; mask-position: center;
+            -webkit-mask-size: contain; mask-size: contain; vertical-align: -0.125em; }
+        .icon-lock { -webkit-mask-image: url('./lock.svg'); mask-image: url('./lock.svg'); }
+        .lock-icon { display: block; width: 3rem; height: 3rem; margin: 0 auto 0.75rem; color: var(--warn); }
+    </style>
+</head>
+<body>
+<div class="wrap" id="app">
+    <div class="loading">Loading status…</div>
+</div>
+
+<script>
+let pageData = null;
+const charts = {};
+
+function applyTheme(theme) {
+    let dark;
+    if (theme === "dark") dark = true;
+    else if (theme === "light") dark = false;
+    else {
+        const saved = localStorage.getItem("neko_theme");
+        if (saved) dark = saved === "dark";
+        else dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    document.documentElement.classList.toggle("dark", dark);
+}
+
+function toggleTheme() {
+    const dark = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("neko_theme", dark ? "dark" : "light");
+    // recolor any already-rendered charts in place (no destroy/recreate, no
+    // dependency on getComputedStyle timing)
+    updateChartsTheme();
+}
+
+// matches the --text values defined in :root / html.dark above; computed
+// directly instead of via getComputedStyle so chart recoloring never races
+// with the browser's style recalculation after a classList toggle
+function chartTextColor() {
+    return document.documentElement.classList.contains("dark") ? "#e6edf3" : "#1b1c1d";
+}
+
+function updateChartsTheme() {
+    const color = chartTextColor();
+    Object.keys(charts).forEach(function (i) {
+        const chart = charts[i];
+        if (!chart) return;
+        chart.options.scales.x.ticks.color = color;
+        chart.options.scales.y.ticks.color = color;
+        chart.update("none");
+    });
+}
+
+function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = s == null ? "" : s;
+    return d.innerHTML;
+}
+
+function pct(v) {
+    if (v == null || v < 0) return "—";
+    return (v * 100).toFixed(2) + "%";
+}
+
+// uptime color tiers: >=90% green, <90% yellow, <30% red. "unknown" when no data.
+function uptimeTier(v) {
+    if (v == null || v < 0) return "unknown";
+    if (v >= 0.90) return "up";
+    if (v >= 0.30) return "warn";
+    return "down";
+}
+
+function fmtTime(ms) {
+    const d = new Date(ms);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function load() {
+    fetch("./api/page", { credentials: "same-origin" })
+        .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+        .then(function (res) {
+            const d = res.body;
+            if (!d.exists) { pageData = null; renderEmpty(); return; }
+            if (d.locked) { pageData = null; renderLock(d); return; }
+            // only rebuild the whole DOM (which would close any open chart) when
+            // the page's shape actually changed; otherwise patch data in place
+            const full = !pageData || structureChanged(pageData, d);
+            pageData = d;
+            applyTheme(d.theme);
+            if (full) render(d); else updateData(d);
+        })
+        .catch(function () { renderEmpty(); });
+}
+
+// true when a full DOM rebuild is required (title/description changed, or the
+// set/order of monitors on the page changed) rather than just their live data
+function structureChanged(oldD, newD) {
+    if (oldD.title !== newD.title || oldD.description !== newD.description) return true;
+    const oldIds = (oldD.monitors || []).map(function (m) { return m.id; }).join(",");
+    const newIds = (newD.monitors || []).map(function (m) { return m.id; }).join(",");
+    return oldIds !== newIds;
+}
+
+// lightweight periodic refresh: patches banner/badges/bars/meta text and any
+// open chart's data in place, without touching the rest of the DOM (so open
+// charts and their scroll position stay put across auto-refreshes)
+function updateData(d) {
+    const monitors = d.monitors || [];
+    let anyDown = false, anyUnknown = false;
+    monitors.forEach(function (m) {
+        if (!m.known) anyUnknown = true;
+        else if (!m.current_up) anyDown = true;
+    });
+    const banner = document.querySelector(".banner");
+    if (banner) {
+        banner.className = "banner " + (anyDown ? "bad" : "ok");
+        const icon = banner.querySelector(".banner-icon");
+        if (icon) icon.textContent = anyDown ? "✕" : "✓";
+        const text = banner.querySelector(".banner-text");
+        if (text) text.textContent = anyDown ? "Some Systems Down" : (anyUnknown ? "Status Pending" : "All Systems Operational");
+    }
+
+    monitors.forEach(function (m, i) {
+        const el = document.querySelector('.service[data-idx="' + i + '"]');
+        if (!el) return;
+
+        const badgeCls = m.known ? uptimeTier(m.uptime_24h) : "unknown";
+        const badge = el.querySelector(".badge");
+        if (badge) { badge.className = "badge " + badgeCls; badge.textContent = m.known ? pct(m.uptime_24h) : "—"; }
+
+        const barsEl = el.querySelector(".bars");
+        if (barsEl) barsEl.outerHTML = renderBars(m.heartbeats);
+
+        const timeEl = el.querySelector(".meta-time");
+        if (timeEl) timeEl.textContent = (m.heartbeats && m.heartbeats.length) ? fmtTime(m.heartbeats[0].time) : "";
+        const pingEl = el.querySelector(".meta-ping");
+        if (pingEl) pingEl.textContent = m.avg_ping ? m.avg_ping.toFixed(0) + " ms avg" : "";
+        const d30 = el.querySelector(".meta-30d");
+        if (d30) { d30.className = "meta-30d tier-" + uptimeTier(m.uptime_30d); d30.textContent = "30d " + pct(m.uptime_30d); }
+
+        if (el.classList.contains("open")) updateChartData(i, m.heartbeats || []);
+    });
+
+    const lastUpdated = document.getElementById("lastUpdated");
+    if (lastUpdated) lastUpdated.textContent = new Date(d.updated).toLocaleString();
+    startCountdown();
+}
+
+// updates an already-open chart's data with no animation (avoids the
+// bottom-to-top "slide" redraw on every refresh, and never rebuilds the canvas)
+function updateChartData(i, beats) {
+    const chart = charts[i];
+    if (!chart) return;
+    chart.data.labels = beats.map(function (b) { return fmtTime(b.time); });
+    chart.data.datasets[0].data = beats.map(function (b) { return b.up ? b.latency : null; });
+    chart.update("none");
+}
+
+function renderEmpty() {
+    document.getElementById("app").innerHTML =
+        '<div class="empty"><h2>No status page</h2><p>No status page is configured for this hostname.</p></div>';
+}
+
+function renderLock(d) {
+    applyTheme("auto");
+    document.getElementById("app").innerHTML =
+        '<div class="lock"><span class="icon icon-lock lock-icon"></span><h3>' + esc(d.title || "Protected") + '</h3>' +
+        '<p>This status page is password protected.</p>' +
+        '<input type="password" id="pw" placeholder="Password" onkeydown="if(event.key===\'Enter\')submitPw()">' +
+        '<div class="err" id="pwErr"></div>' +
+        '<button onclick="submitPw()">Unlock</button></div>';
+    setTimeout(function () { const e = document.getElementById("pw"); if (e) e.focus(); }, 50);
+}
+
+function submitPw() {
+    const pw = document.getElementById("pw").value;
+    fetch("./api/page/auth", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw })
+    }).then(function (r) {
+        if (r.ok) load();
+        else document.getElementById("pwErr").textContent = "Incorrect password";
+    });
+}
+
+function render(d) {
+    const monitors = d.monitors || [];
+    let anyDown = false, anyUnknown = false;
+    monitors.forEach(function (m) {
+        if (!m.known) anyUnknown = true;
+        else if (!m.current_up) anyDown = true;
+    });
+    const bannerCls = anyDown ? "bad" : "ok";
+    const bannerIcon = anyDown ? "✕" : "✓";
+    const bannerText = anyDown ? "Some Systems Down" : (anyUnknown ? "Status Pending" : "All Systems Operational");
+
+    let html =
+        '<div class="topbar">' +
+        '<img class="logo" src="./logo.png" alt="Uptime Neko">' +
+        '<div class="title">' + esc(d.title) + '</div>' +
+        '<button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">◐</button>' +
+        '</div>' +
+        '<div class="banner ' + bannerCls + '"><span class="icon banner-icon">' + bannerIcon + '</span><span class="banner-text">' + esc(bannerText) + '</span></div>';
+
+    if (d.description) html += '<p class="desc">' + esc(d.description) + '</p>';
+
+    html += '<div class="section-title">Services</div>';
+    if (!monitors.length) {
+        html += '<div class="services"><div class="service"><div class="service-name">No monitors on this page.</div></div></div>';
+    } else {
+        html += '<div class="services">';
+        monitors.forEach(function (m, i) {
+            const badgeCls = m.known ? uptimeTier(m.uptime_24h) : "unknown";
+            const badgeTxt = m.known ? pct(m.uptime_24h) : "—";
+            const ping = m.avg_ping ? m.avg_ping.toFixed(0) + " ms avg" : "";
+            html +=
+                '<div class="service" data-idx="' + i + '" onclick="toggleService(' + i + ')">' +
+                '<div class="service-row">' +
+                '<span class="badge ' + badgeCls + '">' + badgeTxt + '</span>' +
+                '<span class="service-name">' + esc(m.name) + '</span>' +
+                renderBars(m.heartbeats) +
+                '</div>' +
+                '<div class="service-meta"><span class="meta-time">' + (m.heartbeats && m.heartbeats.length ? fmtTime(m.heartbeats[0].time) : "") + '</span>' +
+                '<span class="meta-ping">' + ping + '</span>' +
+                '<span class="meta-30d tier-' + uptimeTier(m.uptime_30d) + '">30d ' + pct(m.uptime_30d) + '</span></div>' +
+                '<div class="chart-wrap"><canvas id="chart' + i + '"></canvas></div>' +
+                '</div>';
+        });
+        html += '</div>';
+    }
+
+    html += '<div class="footer">Powered by <a href="https://zoraxy.aroz.org" target="_blank">Uptime Neko</a>' +
+        '<br>Last updated: <span id="lastUpdated">' + new Date(d.updated).toLocaleString() + '</span> · refreshing in <span id="cd">60</span>s</div>';
+
+    document.getElementById("app").innerHTML = html;
+    startCountdown();
+}
+
+function renderBars(heartbeats) {
+    const hb = (heartbeats || []).slice(-40);
+    let html = '<div class="bars">';
+    hb.forEach(function (b) {
+        let h = 10;
+        if (b.up && b.latency > 0) h = Math.min(28, 8 + Math.log10(b.latency + 1) * 8);
+        else if (!b.up) h = 28;
+        html += '<div class="bar ' + (b.up ? "up" : "down") + '" style="height:' + h.toFixed(0) +
+            'px" title="' + esc(fmtTime(b.time)) + '"></div>';
+    });
+    html += '</div>';
+    return html;
+}
+
+function toggleService(i) {
+    const el = document.querySelector('.service[data-idx="' + i + '"]');
+    el.classList.toggle("open");
+    if (el.classList.contains("open")) renderChart(i);
+    else if (charts[i]) { charts[i].destroy(); delete charts[i]; }
+}
+
+function renderChart(i) {
+    const m = pageData.monitors[i];
+    const beats = m.heartbeats || [];
+    if (charts[i]) charts[i].destroy();
+    const ctx = document.getElementById("chart" + i).getContext("2d");
+    const textColor = chartTextColor();
+    const grad = ctx.createLinearGradient(0, 0, 0, 180);
+    grad.addColorStop(0, "rgba(34,197,94,0.35)");
+    grad.addColorStop(1, "rgba(34,197,94,0.02)");
+    charts[i] = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: beats.map(function (b) { return fmtTime(b.time); }),
+            datasets: [{
+                data: beats.map(function (b) { return b.up ? b.latency : null; }),
+                borderColor: "#22c55e", backgroundColor: grad,
+                pointRadius: 0, borderWidth: 2, tension: 0.35, fill: true, spanGaps: true
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: textColor, maxTicksLimit: 6 }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: "rgba(128,128,128,0.15)" } }
+            }
+        }
+    });
+}
+
+let cdTimer = null;
+function startCountdown() {
+    if (cdTimer) clearInterval(cdTimer);
+    let n = 60;
+    cdTimer = setInterval(function () {
+        n--;
+        const el = document.getElementById("cd");
+        if (el) el.textContent = n;
+        if (n <= 0) { clearInterval(cdTimer); load(); }
+    }, 1000);
+}
+
+// initial theme guess before data arrives
+applyTheme("auto");
+load();
+</script>
+</body>
+</html>

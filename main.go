@@ -52,7 +52,7 @@ func main() {
 		Author:        "aroz.org",
 		AuthorContact: "noreply@aroz.org",
 		Description:   "A mini Uptime Monitor: monitor hosts, websites, ports, DNS and TLS certs with status pages and notifications.",
-		URL:           "https://zoraxy.aroz.org",
+		URL:           "https://github.com/aroz-online/uptime-neko",
 		Type:          plugin.PluginType_Utilities,
 		VersionMajor:  1,
 		VersionMinor:  0,

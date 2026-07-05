@@ -4,7 +4,7 @@
  "author": "aroz.org",
  "author_contact": "noreply@aroz.org",
  "description": "A mini Uptime Monitor: monitor hosts, websites, ports, DNS and TLS certs with status pages and notifications.",
- "url": "https://zoraxy.aroz.org",
+ "url": "https://github.com/aroz-online/uptime-neko",
  "type": 1,
  "version_major": 1,
  "version_minor": 0,

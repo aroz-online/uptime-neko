@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -92,7 +93,13 @@ func main() {
 	// --- Admin server (proxied via Zoraxy) ---
 	adminMux := http.NewServeMux()
 	embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &adminFS, WEB_ROOT, UI_PATH)
-	embedWebRouter.SetDevWebRoot("./www")
+	// Only point at the on-disk ./www folder when it actually exists (local dev
+	// runs from the source tree); otherwise leave dev mode off so the router
+	// falls back to the embedded FS, which is what a standalone-deployed binary
+	// (no ./www next to it) needs to serve its UI at all.
+	if info, err := os.Stat("./www"); err == nil && info.IsDir() {
+		embedWebRouter.SetDevWebRoot("./www")
+	}
 	embedWebRouter.RegisterTerminateHandler(func() {
 		fmt.Println("[uptime-neko] terminating...")
 		engine.StopAll()
